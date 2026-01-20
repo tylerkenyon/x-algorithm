@@ -95,6 +95,7 @@ class TransformerConfig:
     widening_factor: float = 4.0
 
     attn_output_multiplier: float = 1.0
+    learnable_temperature: bool = False  
 
     name: Optional[str] = None
 
@@ -106,6 +107,7 @@ class TransformerConfig:
             key_size=self.key_size,
             attn_output_multiplier=self.attn_output_multiplier,
             num_layers=self.num_layers,
+            learnable_temperature=self.learnable_temperature,
         )
 
 
@@ -272,6 +274,7 @@ class MultiHeadAttention(hk.Module):
         value_size: Optional[int] = None,
         model_size: Optional[int] = None,
         attn_output_multiplier: float = 1.0,
+        learnable_temperature: bool = False,
         name: Optional[str] = None,
     ):
         super().__init__(name=name)
@@ -281,6 +284,7 @@ class MultiHeadAttention(hk.Module):
         self.value_size = value_size or key_size
         self.model_size = model_size or key_size * num_q_heads
         self.attn_output_multiplier = attn_output_multiplier
+        self.learnable_temperature = learnable_temperature
         self.with_bias = with_bias
 
     def __call__(
@@ -341,6 +345,18 @@ class MultiHeadAttention(hk.Module):
         attn_logits *= self.attn_output_multiplier
         max_attn_val = jnp.array(30.0, dtype=attn_logits.dtype)
         attn_logits = max_attn_val * jnp.tanh(attn_logits / max_attn_val)
+        
+
+        if self.learnable_temperature:
+
+            temperature = hk.get_parameter(
+                "attention_temperature",
+                shape=[],
+                dtype=jnp.float32,
+                init=hk.initializers.Constant(1.0),
+            )
+            temperature = jnp.maximum(temperature, 0.1)
+            attn_logits = attn_logits / temperature
 
         mask = mask[:, :, None, :, :]
 
@@ -383,6 +399,7 @@ class MHABlock(hk.Module):
     num_kv_heads: int
     key_size: int
     attn_output_multiplier: float = 1.0
+    learnable_temperature: bool = False
 
     @hk.transparent
     def __call__(
@@ -403,6 +420,7 @@ class MHABlock(hk.Module):
                 key_size=self.key_size,
                 model_size=model_size,
                 attn_output_multiplier=self.attn_output_multiplier,
+                learnable_temperature=self.learnable_temperature,
             )(query, key, value, mask)
 
         attn_output = attn_block(inputs, side_input, side_input, mask)
@@ -452,6 +470,7 @@ class DecoderLayer(hk.Module):
     widening_factor: float = 4.0
     name: Optional[str] = None
     attn_output_multiplier: float = 1.0
+    learnable_temperature: bool = False
 
     def __call__(
         self,
@@ -472,6 +491,7 @@ class DecoderLayer(hk.Module):
             num_kv_heads=self.num_kv_heads,
             key_size=self.key_size,
             attn_output_multiplier=self.attn_output_multiplier,
+            learnable_temperature=self.learnable_temperature,
         )(layer_norm(h), mask)
         h_attn = attn_output.embeddings
 
@@ -511,6 +531,7 @@ class Transformer(hk.Module):
     widening_factor: float
     attn_output_multiplier: float
     num_layers: int
+    learnable_temperature: bool = False
     name: Optional[str] = None
 
     def __call__(
@@ -567,6 +588,7 @@ class Transformer(hk.Module):
                 widening_factor=widening_factor or self.widening_factor,
                 num_layers=self.num_layers,
                 attn_output_multiplier=self.attn_output_multiplier,
+                learnable_temperature=self.learnable_temperature,
                 name=name,
                 layer_index=layer_index,
             )(h, mask, padding_mask)

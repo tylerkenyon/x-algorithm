@@ -35,7 +35,7 @@ class TestLearnableTemperature:
             num_layers=2,
         )
         
-        assert config.learnable_temperature == False
+        assert config.learnable_temperature is False
 
     def test_temperature_can_be_enabled(self):
         """Test that learnable temperature can be enabled via config."""
@@ -48,7 +48,7 @@ class TestLearnableTemperature:
             learnable_temperature=True,
         )
         
-        assert config.learnable_temperature == True
+        assert config.learnable_temperature is True
 
     def test_transformer_forward_with_temperature(self):
         """Test that transformer forward pass works with learnable temperature enabled."""

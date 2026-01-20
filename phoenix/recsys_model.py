@@ -163,7 +163,7 @@ def block_history_reduce(
         axis=-1,
     )
     
-    # Apply layer normalization for improved training stability
+
     post_author_embedding = layer_norm(post_author_embedding)
 
     embed_init = hk.initializers.VarianceScaling(embed_init_scale, mode="fan_out")
@@ -228,7 +228,7 @@ def block_candidate_reduce(
         axis=-1,
     )
     
-    # Apply layer normalization for improved training stability
+
     post_author_embedding = layer_norm(post_author_embedding)
 
     embed_init = hk.initializers.VarianceScaling(embed_init_scale, mode="fan_out")

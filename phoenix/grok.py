@@ -95,7 +95,7 @@ class TransformerConfig:
     widening_factor: float = 4.0
 
     attn_output_multiplier: float = 1.0
-    learnable_temperature: bool = False  # Enable learnable attention temperature scaling
+    learnable_temperature: bool = False  
 
     name: Optional[str] = None
 
@@ -346,16 +346,15 @@ class MultiHeadAttention(hk.Module):
         max_attn_val = jnp.array(30.0, dtype=attn_logits.dtype)
         attn_logits = max_attn_val * jnp.tanh(attn_logits / max_attn_val)
         
-        # Apply learnable temperature scaling if enabled
+
         if self.learnable_temperature:
-            # Initialize temperature near 1.0 for stability
+
             temperature = hk.get_parameter(
                 "attention_temperature",
                 shape=[],
                 dtype=jnp.float32,
                 init=hk.initializers.Constant(1.0),
             )
-            # Ensure temperature is positive and not too small
             temperature = jnp.maximum(temperature, 0.1)
             attn_logits = attn_logits / temperature
 
